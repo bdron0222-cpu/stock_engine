@@ -2,9 +2,7 @@ name: Stock Engine Automation
 
 on:
   schedule:
-    # 每天 15:30 (台灣時間)
     - cron: '30 7 * * *'
-    # 每週一 09:00 (台灣時間)
     - cron: '0 1 * * 1'
   workflow_dispatch: 
 
@@ -25,27 +23,24 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # 1. 安裝 requirements.txt (現在裡面已經沒有 git+ 了)
           pip install --no-cache-dir -r requirements.txt
+          # 2. 強制從 PyPI 安裝 pandas-ta
           pip install --no-cache-dir pandas-ta --ignore-requires-python
 
-      # 【強制覆寫修正版】不處理引號替換，直接將錯誤行寫入為正確程式碼，避開語法衝突
+      # 【強制覆寫修正版】修正 pandas-ta 的語法錯誤
       - name: Patch pandas-ta syntax error
         run: |
-          # 取得 pandas-ta 安裝路徑
           INSTALL_PATH=$(pip show pandas-ta | grep "Location:" | awk '{print $2}')
           FILE_PATH="$INSTALL_PATH/pandas_ta/overlap/hma.py"
           
           echo "正在強制修正檔案: $FILE_PATH"
-          
-          # 使用 Python 腳本直接覆寫該行，避開引號解析風險
           python -c "
           path = '$FILE_PATH'
           with open(path, 'r', encoding='utf-8') as f:
               lines = f.readlines()
-          
           with open(path, 'w', encoding='utf-8') as f:
               for line in lines:
-                  # 直接尋找包含 hma.name = f 的錯誤行，並用正確的語法完全取代它
                   if 'hma.name = f' in line:
                       f.write('    hma.name = f\"HMA{\'\' if mamode == \'wma\' else mamode[0]}_{length}\"\n')
                   else:
@@ -66,9 +61,5 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          
-          # 強制加入 csv 與狀態檔
           git add -f watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv stocks_list.csv market_state.json
-          
-          # 如果沒有變更則跳過
           git diff --quiet && git diff --staged --quiet || (git commit -m "自動更新: 每日選股結果" && git push)
