@@ -2,11 +2,9 @@ name: Stock Engine Automation
 
 on:
   schedule:
-    # 每天 15:30 (台灣時間) 執行 = 07:30 (UTC)
     - cron: '30 7 * * *'
-    # 每週一 09:00 (台灣時間) 執行 = 01:00 (UTC)
     - cron: '0 1 * * 1'
-  workflow_dispatch: # 允許你手動在網頁按按鈕觸發
+  workflow_dispatch:
 
 jobs:
   daily-task:
@@ -20,13 +18,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.11'  # 強制使用 3.11 以支援最新套件
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 使用 --upgrade 確保獲取最新套件版本，解決找不到版本的錯誤
-          pip install --upgrade --no-cache-dir -r requirements.txt
+          # 使用標準安裝，Python 3.11 可以順利解析 pandas-ta
+          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir pandas-ta
 
       # 週一排程任務
       - name: Run Weekly Fetch
