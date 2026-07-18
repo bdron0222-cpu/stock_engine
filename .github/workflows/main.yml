@@ -6,13 +6,13 @@ on:
     - cron: '30 7 * * *'
     # 每週一 09:00 (台灣時間) 執行 = 01:00 (UTC)
     - cron: '0 1 * * 1'
-  workflow_dispatch: # 允許你手動在網頁按按鈕觸發
+  workflow_dispatch: # 允許手動觸發
 
 jobs:
   daily-task:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 必須開放寫入權限，以便 push CSV
+      contents: write 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -20,15 +20,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11' # 使用 3.11 確保支援最新的套件環境
+          python-version: '3.11' # 使用 3.11 以支援最新依賴
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 1. 先安裝標準依賴 (requirements.txt 內已不含 pandas-ta)
+          # 1. 優先單獨安裝 pandas-ta，避開依賴衝突
+          pip install --no-cache-dir pandas-ta
+          # 2. 再安裝 requirements.txt 中的其他基本套件
           pip install --no-cache-dir -r requirements.txt
-          # 2. 強制安裝 pandas-ta，且不檢查相依性（--no-deps）以避開衝突
-          pip install --no-cache-dir --no-deps pandas-ta
 
       # 週一排程任務
       - name: Run Weekly Fetch
