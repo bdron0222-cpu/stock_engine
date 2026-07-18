@@ -1,23 +1,8 @@
 import streamlit as st
 import site
 import os
-import subprocess
-import sys
 
-# --- 1. Runtime Install: 確保 pandas-ta 已安裝 ---
-def ensure_pandas_ta():
-    try:
-        import pandas_ta
-    except ImportError:
-        st.info("偵測到環境缺少 pandas-ta，正在自動安裝中，請稍候...")
-        # 安裝相容於 Python 3.10 的版本
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas-ta==0.3.14b"])
-        st.success("pandas-ta 已安裝完畢，正在重啟頁面...")
-        st.rerun()
-
-ensure_pandas_ta()
-
-# --- 2. 自動修復 pandas-ta 語法錯誤 (Hotfix) ---
+# --- 1. 自動修復 pandas-ta 語法錯誤 (Hotfix) ---
 def patch_pandas_ta():
     try:
         for path in site.getsitepackages():
@@ -33,12 +18,11 @@ def patch_pandas_ta():
                         f.write(new_content)
                 break
     except Exception as e:
-        st.warning(f"Patching failed, but continuing: {e}")
+        pass # 隱藏警告，避免干擾畫面
 
 patch_pandas_ta()
 
-# --- 3. 原本的 import 與程式碼 ---
-# 注意：這些 import 必須放在安裝與修復之後
+# --- 2. 原本的 import 與程式碼 ---
 import pandas as pd
 import json
 from datetime import datetime
