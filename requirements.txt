@@ -4,4 +4,4 @@ streamlit>=1.33.0
 requests
 lxml
 numpy
-https://codeload.github.com/twopirllc/pandas-ta/zip/main
+pandas-ta==0.3.14b
