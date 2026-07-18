@@ -12,7 +12,7 @@ jobs:
   daily-task:
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
+      contents: write # 必須開放寫入權限，以便 push CSV
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -20,15 +20,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11' # 使用 3.11 以支援最新依賴
+          python-version: '3.11' # 使用 3.11 確保最佳相容性
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 1. 優先單獨安裝 pandas-ta，避開依賴衝突
-          pip install --no-cache-dir pandas-ta
-          # 2. 再安裝 requirements.txt 中的其他基本套件
+          # 1. 先安裝 requirements.txt 中的標準套件
           pip install --no-cache-dir -r requirements.txt
+          # 2. 使用 Zipball 連結直接安裝 pandas-ta (避開 Git 驗證與版本解析問題)
+          pip install --no-cache-dir https://github.com/twopirllc/pandas-ta/archive/master.zip
 
       # 週一排程任務
       - name: Run Weekly Fetch
