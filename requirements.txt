@@ -4,4 +4,4 @@ streamlit>=1.33.0
 requests
 lxml
 numpy
-https://github.com/twopirllc/pandas-ta/archive/refs/heads/main.zip
+https://codeload.github.com/twopirllc/pandas-ta/zip/main
