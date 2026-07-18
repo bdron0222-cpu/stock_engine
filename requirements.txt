@@ -1,0 +1,7 @@
+pandas
+pandas_ta
+yfinance
+streamlit
+requests
+scipy
+numpy
