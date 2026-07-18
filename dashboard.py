@@ -1,6 +1,31 @@
 import streamlit as st
-import pandas as pd
+import site
 import os
+
+# --- 1. 自動修復 pandas-ta 語法錯誤 (Hotfix) ---
+# 確保在任何 import 發生前執行，解決 Streamlit Cloud 環境下的語法衝突
+def patch_pandas_ta():
+    try:
+        for path in site.getsitepackages():
+            hma_path = os.path.join(path, "pandas_ta", "overlap", "hma.py")
+            if os.path.exists(hma_path):
+                with open(hma_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # 若發現錯誤語法 (例如 hma.name = f"HMA{""...)，則強制覆寫為正確語法
+                if 'hma.name = f' in content and '""' in content:
+                    new_content = content.replace('f"HMA{""', "f'HMA{''")
+                    with open(hma_path, 'w', encoding='utf-8') as f:
+                        f.write(new_content)
+                break
+    except Exception as e:
+        st.warning(f"Patching failed, but continuing: {e}")
+
+patch_pandas_ta()
+# --------------------------------------------------------
+
+# --- 2. 原本的 import 與程式碼 ---
+import pandas as pd
 import json
 from datetime import datetime
 import filters.market_analyzer
@@ -12,7 +37,6 @@ DUE_FILE = "optimizer_due_date.json"
 def check_optimizer_due():
     """檢查是否超過 90 天未執行優化"""
     if not os.path.exists(DUE_FILE):
-        # 如果沒有記錄檔，預設為今天，給予 90 天緩衝期
         with open(DUE_FILE, "w") as f:
             json.dump({"last_run": datetime.now().strftime("%Y-%m-%d")}, f)
         return False
@@ -21,14 +45,12 @@ def check_optimizer_due():
         data = json.load(f)
         last_run = datetime.strptime(data['last_run'], "%Y-%m-%d")
         
-    # 如果距離上次執行超過 90 天，回傳 True
     return (datetime.now() - last_run).days >= 90
 
 def reset_optimizer_date():
     """重置優化日期"""
     with open(DUE_FILE, "w") as f:
         json.dump({"last_run": datetime.now().strftime("%Y-%m-%d")}, f)
-# --------------------
 
 st.set_page_config(page_title="盤整策略監控儀表板", layout="wide")
 st.title("📈 盤整策略監控儀表板")
@@ -48,7 +70,6 @@ if check_optimizer_due():
         reset_optimizer_date()
         st.success("提醒已重置！請記得推送到 GitHub 更新線上版本。")
         st.rerun()
-# --------------------
 
 # 1. 大盤市場狀態儀表板
 st.subheader("🌐 大盤市場狀態監控")
