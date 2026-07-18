@@ -23,7 +23,10 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install pandas pandas_ta yfinance streamlit requests scipy numpy tqdm matplotlib
+        # 使用 requirements.txt 安裝是最穩定的方式
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       # 週一排程任務
       - name: Run Weekly Fetch
@@ -37,11 +40,12 @@ jobs:
           python market_monitor.py
           python main.py
 
-      # 將產出的檔案推回 Git (重要！)
+      # 將產出的檔案推回 Git
       - name: Commit and Push changes
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          # 如果沒有檔案變更，這步會自動略過，不會報錯
+          # 將所有相關的 csv 與狀態檔加入 git 追蹤
           git add watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv stocks_list.csv market_state.json
+          # 如果沒有檔案變更，這步會自動略過
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update stock data [bot]" && git push)
