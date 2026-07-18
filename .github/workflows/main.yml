@@ -27,8 +27,8 @@ jobs:
           python -m pip install --upgrade pip
           # 1. 先安裝 requirements.txt 中的標準套件
           pip install --no-cache-dir -r requirements.txt
-          # 2. 使用正確的 main 分支連結安裝 pandas-ta (修正 404 錯誤)
-          pip install --no-cache-dir https://github.com/twopirllc/pandas-ta/archive/refs/heads/main.zip
+          # 2. 指定安裝 pandas-ta 版本 0.3.14b，避開依賴解析錯誤
+          pip install --no-cache-dir pandas-ta==0.3.14b
 
       # 週一排程任務
       - name: Run Weekly Fetch
