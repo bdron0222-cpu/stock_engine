@@ -12,7 +12,7 @@ jobs:
   daily-task:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 必須開放寫入權限，以便 push CSV
+      contents: write 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -27,8 +27,8 @@ jobs:
           python -m pip install --upgrade pip
           # 1. 先安裝 requirements.txt 中的標準套件
           pip install --no-cache-dir -r requirements.txt
-          # 2. 指定安裝 pandas-ta 版本 0.3.14b，避開依賴解析錯誤
-          pip install --no-cache-dir pandas-ta==0.3.14b
+          # 2. 直接執行 pip install pandas-ta，讓系統自動抓取最新相容版本
+          pip install --no-cache-dir pandas-ta
 
       # 週一排程任務
       - name: Run Weekly Fetch
