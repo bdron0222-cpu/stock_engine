@@ -27,17 +27,8 @@ jobs:
           python -m pip install --upgrade pip
           # 1. 先安裝 requirements.txt 中的標準套件
           pip install --no-cache-dir -r requirements.txt
-          
-          # 2. 使用 curl 直接下載壓縮檔 (不需要 Git 認證)
-          curl -L https://github.com/twopirllc/pandas-ta/archive/main.zip -o pandas-ta.zip
-          
-          # 3. 解壓縮
-          unzip pandas-ta.zip
-          
-          # 4. 進入資料夾並安裝 (不檢查相依性，強制安裝)
-          cd pandas-ta-main
-          pip install --no-deps .
-          cd ..
+          # 2. 強制安裝與 Python 3.11 相容的 pandas-ta 版本
+          pip install --no-cache-dir pandas-ta==1.17.1
 
       # 週一排程任務
       - name: Run Weekly Fetch
