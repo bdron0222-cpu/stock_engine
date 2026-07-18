@@ -28,13 +28,20 @@ jobs:
           pip install --no-cache-dir -r requirements.txt
           pip install --no-cache-dir pandas-ta --ignore-requires-python
 
-      # 【新增這一步】自動修復 pandas-ta 的語法錯誤
+      # 【修正版】直接用 Linux 指令定位與修改檔案，不觸發任何 Python 程式
       - name: Patch pandas-ta syntax error
         run: |
-          # 找到 hma.py 的位置並執行自動取代，將錯誤的 "" 改為 ''
-          FILE_PATH=$(python -c "import pandas_ta; import os; print(os.path.dirname(pandas_ta.__file__) + '/overlap/hma.py')")
-          sed -i "s/f\"HMA{\"\"/f\"HMA{''/g" "$FILE_PATH"
-          echo "Successfully patched $FILE_PATH"
+          # 取得 pandas-ta 安裝位置
+          INSTALL_PATH=$(pip show pandas-ta | grep "Location:" | awk '{print $2}')
+          FILE_PATH="$INSTALL_PATH/pandas_ta/overlap/hma.py"
+          
+          echo "正在修復檔案: $FILE_PATH"
+          
+          # 將 f"HMA{"" 替換為 f"HMA{''
+          # 使用 sed 修改檔案，避開 Python 執行環境
+          sed -i 's/f"HMA{""/f"HMA{'\''\'\'/g' "$FILE_PATH"
+          
+          echo "語法修正成功！"
 
       - name: Run Fetcher & Monitor
         run: |
