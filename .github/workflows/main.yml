@@ -2,54 +2,50 @@ name: Stock Engine Automation
 
 on:
   schedule:
-    # 每天 15:30 (台灣時間) 執行 = 07:30 (UTC)
+    # 每天 15:30 (台灣時間)
     - cron: '30 7 * * *'
-    # 每週一 09:00 (台灣時間) 執行 = 01:00 (UTC)
+    # 每週一 09:00 (台灣時間)
     - cron: '0 1 * * 1'
-  workflow_dispatch: # 允許手動觸發
+  workflow_dispatch: 
 
 jobs:
-  daily-task:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 必須開放寫入權限，以便 push CSV
+      contents: write 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11' # 使用 3.11 確保最佳相容性
+          python-version: '3.10' # 使用你成功專案的 Python 3.10
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 1. 先安裝 requirements.txt 中的標準套件
+          # 先安裝標準套件 (確保 requirements.txt 沒有 pandas-ta)
           pip install --no-cache-dir -r requirements.txt
-          # 2. 安裝必要的編譯工具
-          pip install --no-cache-dir setuptools wheel
-          # 3. 使用 git+ 直接從 GitHub 原始碼編譯安裝 (避開 PyPI 元數據錯誤)
-          pip install --no-cache-dir git+https://github.com/twopirllc/pandas-ta.git
+          # 強制安裝 pandas-ta，並忽略 metadata 中的 Python 版本限制
+          pip install --no-cache-dir pandas-ta --ignore-requires-python
 
-      # 週一排程任務
-      - name: Run Weekly Fetch
-        if: github.event.schedule == '0 1 * * 1'
-        run: python data_loader/fetch_stock_list.py
-
-      # 每日排程任務
-      - name: Run Daily Tasks
-        if: github.event.schedule == '30 7 * * *' || github.event_name == 'workflow_dispatch'
+      - name: Run Fetcher & Monitor
         run: |
-          python market_monitor.py
-          python main.py
+          if [ "${{ github.event.schedule }}" == "0 1 * * 1" ]; then
+            python data_loader/fetch_stock_list.py
+          else
+            python market_monitor.py
+            python main.py
+          fi
 
-      # 將產出的檔案推回 Git
-      - name: Commit and Push changes
+      - name: Commit and push changes
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          # 將所有相關的 csv 與狀態檔加入 git 追蹤
-          git add watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv stocks_list.csv market_state.json
-          # 如果沒有檔案變更，這步會自動略過
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update stock data [bot]" && git push)
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          
+          # 將所有相關 CSV 與狀態檔加入 git (使用 -f 強制加入)
+          git add -f watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv stocks_list.csv market_state.json
+          
+          # 如果沒有變更則跳過
+          git diff --quiet && git diff --staged --quiet || (git commit -m "自動更新: 每日選股結果" && git push)
