@@ -27,8 +27,10 @@ jobs:
           python -m pip install --upgrade pip
           # 1. 先安裝 requirements.txt 中的標準套件
           pip install --no-cache-dir -r requirements.txt
-          # 2. 強制安裝與 Python 3.11 相容的 pandas-ta 版本
-          pip install --no-cache-dir pandas-ta==1.17.1
+          # 2. 安裝必要的編譯工具
+          pip install --no-cache-dir setuptools wheel
+          # 3. 使用 git+ 直接從 GitHub 原始碼編譯安裝 (避開 PyPI 元數據錯誤)
+          pip install --no-cache-dir git+https://github.com/twopirllc/pandas-ta.git
 
       # 週一排程任務
       - name: Run Weekly Fetch
