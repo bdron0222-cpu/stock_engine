@@ -28,19 +28,26 @@ jobs:
           pip install --no-cache-dir -r requirements.txt
           pip install --no-cache-dir pandas-ta --ignore-requires-python
 
-      # 【修正版】直接用 Linux 指令定位與修改檔案，不觸發任何 Python 程式
+      # 【終極修正版】利用 Python 腳本直接處理檔案，避開所有 Shell 引號問題
       - name: Patch pandas-ta syntax error
         run: |
-          # 取得 pandas-ta 安裝位置
+          # 取得 pandas-ta 安裝路徑
           INSTALL_PATH=$(pip show pandas-ta | grep "Location:" | awk '{print $2}')
           FILE_PATH="$INSTALL_PATH/pandas_ta/overlap/hma.py"
           
           echo "正在修復檔案: $FILE_PATH"
           
-          # 使用雙引號包裹 sed 指令，並正確轉義內容中的雙引號
-          # 這樣可以避免 Shell 產生引號配對錯誤
-          sed -i "s|f\"HMA{\"\"|f\"HMA{''|g" "$FILE_PATH"
-          
+          # 使用 Python 執行字串替換，不需要處理 Shell 引號跳脫問題
+          python -c "
+          path = '$FILE_PATH'
+          with open(path, 'r', encoding='utf-8') as f:
+              content = f.read()
+          # 修復 f-string 的雙引號衝突
+          content = content.replace('f\"HMA{\"\"', \"f'HMA{''\")
+          content = content.replace('mamode == \"wma\"', \"mamode == 'wma'\")
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(content)
+          "
           echo "語法修正成功！"
 
       - name: Run Fetcher & Monitor
