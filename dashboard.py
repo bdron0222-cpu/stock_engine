@@ -1,9 +1,23 @@
 import streamlit as st
 import site
 import os
+import subprocess
+import sys
 
-# --- 1. 自動修復 pandas-ta 語法錯誤 (Hotfix) ---
-# 確保在任何 import 發生前執行，解決 Streamlit Cloud 環境下的語法衝突
+# --- 1. Runtime Install: 確保 pandas-ta 已安裝 ---
+def ensure_pandas_ta():
+    try:
+        import pandas_ta
+    except ImportError:
+        st.info("偵測到環境缺少 pandas-ta，正在自動安裝中，請稍候...")
+        # 安裝相容於 Python 3.10 的版本
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas-ta==0.3.14b"])
+        st.success("pandas-ta 已安裝完畢，正在重啟頁面...")
+        st.rerun()
+
+ensure_pandas_ta()
+
+# --- 2. 自動修復 pandas-ta 語法錯誤 (Hotfix) ---
 def patch_pandas_ta():
     try:
         for path in site.getsitepackages():
@@ -12,7 +26,7 @@ def patch_pandas_ta():
                 with open(hma_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
-                # 若發現錯誤語法 (例如 hma.name = f"HMA{""...)，則強制覆寫為正確語法
+                # 若發現錯誤語法，強制覆寫為正確語法
                 if 'hma.name = f' in content and '""' in content:
                     new_content = content.replace('f"HMA{""', "f'HMA{''")
                     with open(hma_path, 'w', encoding='utf-8') as f:
@@ -22,9 +36,9 @@ def patch_pandas_ta():
         st.warning(f"Patching failed, but continuing: {e}")
 
 patch_pandas_ta()
-# --------------------------------------------------------
 
-# --- 2. 原本的 import 與程式碼 ---
+# --- 3. 原本的 import 與程式碼 ---
+# 注意：這些 import 必須放在安裝與修復之後
 import pandas as pd
 import json
 from datetime import datetime
