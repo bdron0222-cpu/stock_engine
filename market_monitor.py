@@ -19,19 +19,29 @@ def save_state(state):
 def monitor_market():
     print(">>> [系統] 開始執行大盤熔斷監控...")
     
-    # 1. 抓取大盤數據 (TWII)
+    # 1. 抓取大盤數據 (TWII) - 改抓最近 5 天確保資料乾淨穩定
     ticker = "^TWII"
-    df = yf.download(ticker, period="1mo", progress=False)
+    df = yf.download(ticker, period="5d", progress=False)
     
-    if df.empty:
-        print(">>> [錯誤] 無法取得大盤數據")
+    if df.empty or len(df) < 2:
+        print(">>> [錯誤] 無法取得足夠的大盤數據")
         return
-
-    # 確保資料為 1D Series，並強制轉為 float 以進行單值運算
-    close_series = df['Close'].squeeze() 
-    curr_close = float(close_series.iloc[-1])
-    prev_close = float(close_series.iloc[-2])
+        
+    # 【防呆機制】：處理 MultiIndex 或標準欄位結構，確保精確取得 Close 欄位
+    if isinstance(df.columns, pd.MultiIndex):
+        close_series = df['Close'].xs(ticker, axis=1) if ticker in df['Close'].columns else df['Close'].iloc[:, 0]
+    else:
+        close_series = df['Close']
+        
+    # 【防呆機制】：安全取得純數值 (純量)，避免 Series 運算錯亂
+    curr_val = close_series.iloc[-1]
+    prev_val = close_series.iloc[-2]
+    
+    curr_close = float(curr_val.item() if hasattr(curr_val, 'item') else curr_val)
+    prev_close = float(prev_val.item() if hasattr(prev_val, 'item') else prev_val)
+    
     pct_change = (curr_close - prev_close) / prev_close
+    print(f">>> [檢測] 今日收盤: {curr_close:.2f}, 昨日收盤: {prev_close:.2f}, 變動幅度: {pct_change:.2%}")
     
     # 計算 5 日均線
     sma5 = float(close_series.rolling(window=5).mean().iloc[-1])
@@ -61,9 +71,9 @@ def monitor_market():
             print(f">>> [恢復] 市場已穩定 (條件滿足)，解除熔斷。")
         else:
             print(f">>> [防禦中] 市場尚未滿足解凍條件 (今日收盤: {curr_close:.2f}, 5MA: {sma5:.2f})")
-
+            
     # 更新時間戳記
-    state["last_update"] = str(df.index[-1].date())
+    state["last_update"] = str(df.index[-1].strftime('%Y-%m-%d'))
     save_state(state)
     print(f">>> [系統] 當前大盤狀態: {state['status']}")
 
