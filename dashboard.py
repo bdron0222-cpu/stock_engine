@@ -61,16 +61,37 @@ if check_optimizer_due():
         st.success("提醒已重置！請記得推送到 GitHub 更新線上版本。")
         st.rerun()
 
-# 大盤市場狀態儀表板
+# --- 4. 大盤市場狀態儀表板 (改為動態讀取 market_state.json) ---
 st.subheader("🌐 大盤市場狀態監控")
 try:
+    state_file = "market_state.json"
+    if os.path.exists(state_file):
+        with open(state_file, "r") as f:
+            market_state = json.load(f)
+            status = market_state.get("status", "active")
+            reason = market_state.get("reason", "正常運作")
+            last_update = market_state.get("last_update", "未知")
+    else:
+        status = "active"
+        reason = "無狀態檔案"
+        last_update = "未知"
+
     col1, col2, col3 = st.columns(3)
-    with col1: st.metric("市場類型", "盤整盤 (Range-bound)")
-    with col2: st.metric("多空方向", "空頭 (Bearish)")
-    with col3: st.metric("操作建議", "區間操作")
-    st.caption("數據細節：ADX 強度指數 15.34")
-except Exception:
-    st.error("大盤監控系統暫時無法顯示")
+    with col1: 
+        if status == "frozen":
+            st.metric("市場狀態", "🔴 熔斷防禦中 (Frozen)")
+        else:
+            st.metric("市場狀態", "🟢 正常交易 (Active)")
+    with col2: 
+        st.metric("觸發原因/狀態", reason)
+    with col3: 
+        st.metric("最後檢測日期", last_update)
+        
+    if status == "frozen":
+        st.warning("⚠️ **系統安全機制啟動：目前大盤跌幅過大，已進入暫停交易與防禦狀態！**")
+        
+except Exception as e:
+    st.error(f"大盤監控系統暫時無法顯示: {e}")
 
 # 策略操作紀律
 with st.expander("📌 每日策略操作紀律 (進出場與風控說明)"):
@@ -92,7 +113,7 @@ with st.expander("📊 分類標準定義"):
     - **🔥 積極型**：`Beta > 1.0` 且 `Rho > 0.5`。
     """)
 
-# --- 4. 載入數據 (加入檔案時間顯示與手動強制刷新機制) ---
+# --- 5. 載入數據 (加入檔案時間顯示與手動強制刷新機制) ---
 if os.path.exists("watchlist_conservative.csv"):
     file_time = os.path.getmtime("watchlist_conservative.csv")
     formatted_time = datetime.fromtimestamp(file_time).strftime("%Y-%m-%d %H:%M:%S")
@@ -138,4 +159,4 @@ if valid_dfs:
     st.sidebar.metric("Beta", f"{float(stock_info.get('beta', 0)):.2f}")
     st.sidebar.metric("Rho", f"{float(stock_info.get('rho', 0)):.2f}")
 else:
-    st.sidebar.info("目前無可檢索標的。[cite: 1]")
+    st.sidebar.info("目前無可檢索標的。")
