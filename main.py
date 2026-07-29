@@ -81,10 +81,10 @@ def main():
     print(f">>> [系統] 執行漏斗篩選...")
     watchlist_tickers = bulk_funnel_filter(ticker_list)
     
-    # 【修正】：如果今日無符合標的，必須輸出空表覆蓋舊檔案，讓 Git 偵測到變動並讓 Streamlit 清空畫面
+    # 如果今日無符合標的，輸出空表覆蓋舊檔案
     if not watchlist_tickers:
         print(">>> 今日無符合標的，覆寫為空表。")
-        empty_df = pd.DataFrame(columns=['ticker', 'price', 'volume', 'beta', 'rho', 'buy_signal', 'bb_dist'])
+        empty_df = pd.DataFrame(columns=['ticker', 'date', 'price', 'volume', 'beta', 'rho', 'buy_signal', 'bb_dist'])
         empty_df.to_csv("watchlist_conservative.csv", index=False)
         empty_df.to_csv("watchlist_aggressive.csv", index=False)
         empty_df.to_csv("watchlist_noise.csv", index=False)
@@ -97,33 +97,35 @@ def main():
     print(">>> [系統] 正在準備統計數據 (Beta/Rho/Volume)...")
     market_df = yf.download("^TWII", period="1mo", progress=False)
     
-    # --- 日誌防呆機制：印出抓到的最新數據日期 ---
     latest_date_str = market_df.index[-1].strftime('%Y-%m-%d')
     print(f">>> [檢查] 目前大盤數據最新日期為: {latest_date_str}")
-    # ---------------------------------------------
 
     market_data = market_df['Close'].iloc[:, 0] if isinstance(market_df.columns, pd.MultiIndex) else market_df['Close']
     
-    # 3. 計算並填入 price, volume, beta, rho
+    # 3. 計算並填入 date, price, volume, beta, rho
     print(f">>> [系統] 正在計算 {len(watchlist)} 檔股票的技術統計...")
-    price_list, volume_list, beta_list, rho_list = [], [], [], []
+    date_list, price_list, volume_list, beta_list, rho_list = [], [], [], [], []
     
     for ticker in watchlist['ticker']:
         stock_df = yf.download(ticker, period="1mo", progress=False)
         if isinstance(stock_df.columns, pd.MultiIndex):
             stock_df = stock_df.xs(ticker, axis=1, level=1)
         
+        # 取得最後一筆資料的實際日期
+        data_date = stock_df.index[-1].strftime('%Y-%m-%d')
         price = stock_df['Close'].iloc[-1]
         raw_volume = stock_df['Volume'].iloc[-1] if 'Volume' in stock_df.columns else 0
         volume = int(round(raw_volume / 1000))
         
         beta, rho = calculate_beta_and_rho(stock_df['Close'], market_data)
         
+        date_list.append(data_date)
         price_list.append(price)
         volume_list.append(volume)
         beta_list.append(beta)
         rho_list.append(rho)
         
+    watchlist['date'] = date_list
     watchlist['price'] = price_list
     watchlist['volume'] = volume_list
     watchlist['beta'] = beta_list
@@ -134,8 +136,8 @@ def main():
     strategy_results = watchlist['ticker'].apply(calculate_strategy)
     watchlist = pd.concat([watchlist, strategy_results], axis=1)
     
-    # 5. 分類並存檔
-    target_columns = ['ticker', 'price', 'volume', 'beta', 'rho', 'buy_signal', 'bb_dist']
+    # 5. 分類並存檔 (包含 date 欄位)
+    target_columns = ['ticker', 'date', 'price', 'volume', 'beta', 'rho', 'buy_signal', 'bb_dist']
     
     cons = watchlist[watchlist['beta'] < 0.5][target_columns]
     aggr = watchlist[(watchlist['beta'] > 1.0) & (watchlist['rho'] > 0.5)][target_columns]
@@ -145,10 +147,9 @@ def main():
     aggr.to_csv("watchlist_aggressive.csv", index=False)
     noise.to_csv("watchlist_noise.csv", index=False)
     
-    # 【修正】：補上輸出 Streamlit 需要的 "潛力觀察 (All)" 檔案
     watchlist[target_columns].to_csv("all_candidates_proximity.csv", index=False)
     
-    print(f">>> [成功] 已產出分類清單，成交量已轉換為張數。")
+    print(f">>> [成功] 已產出分類清單（含資料日期），成交量已轉換為張數。")
 
 if __name__ == "__main__":
     main()
