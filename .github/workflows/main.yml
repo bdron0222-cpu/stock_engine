@@ -51,7 +51,7 @@ jobs:
 
       - name: Run Fetcher & Monitor
         run: |
-          # 修正：如果 stocks_list.csv 不存在，或剛好是排程星期一，就強制去抓取全市場股票清單
+          # 如果 stocks_list.csv 不存在，或剛好是排程星期一，就強制去抓取全市場股票清單
           if [ ! -f "stocks_list.csv" ] || [ "${{ github.event.schedule }}" == "0 1 * * 1" ]; then
             python data_loader/fetch_stock_list.py
           fi
@@ -62,6 +62,10 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          # 修正：將 all_candidates_proximity.csv 加入 Git 強制追蹤與提交清單
+          
+          # 【新增防護】：確保所有清單與狀態檔案必定存在，避免 git add 找不到檔案而報錯中斷
+          touch watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv all_candidates_proximity.csv stocks_list.csv market_state.json
+          
+          # 將檔案強制加入 Git 追蹤與提交清單
           git add -f watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv all_candidates_proximity.csv stocks_list.csv market_state.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "自動更新: 每日選股結果" && git push)
