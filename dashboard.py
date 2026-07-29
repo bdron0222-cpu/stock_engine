@@ -92,7 +92,16 @@ with st.expander("📊 分類標準定義"):
     - **🔥 積極型**：`Beta > 1.0` 且 `Rho > 0.5`。
     """)
 
-# 載入數據
+# --- 4. 載入數據 (加入檔案時間顯示與手動強制刷新機制) ---
+if os.path.exists("watchlist_conservative.csv"):
+    file_time = os.path.getmtime("watchlist_conservative.csv")
+    formatted_time = datetime.fromtimestamp(file_time).strftime("%Y-%m-%d %H:%M:%S")
+    st.info(f"📁 雲端資料檔最後更新時間: {formatted_time}")
+
+if st.button("🔄 強制刷新儀表板資料"):
+    st.cache_data.clear() # 清除所有快取
+    st.rerun()          # 重新載入頁面
+
 @st.cache_data(ttl=60)
 def load_watchlist(filename):
     if os.path.exists(filename):
@@ -112,7 +121,6 @@ def display_table(df):
 
 # 分類看板 Tab
 tab1, tab2, tab3 = st.tabs(["🛡️ 穩健型", "🔥 積極型", "⚠️ 雜訊過濾"])
-
 with tab1: display_table(df_cons)
 with tab2: display_table(df_aggr)
 with tab3: display_table(df_noise)
@@ -120,7 +128,6 @@ with tab3: display_table(df_noise)
 # 側邊欄檢索
 st.sidebar.header("🔍 個股詳細檢索")
 valid_dfs = [df for df in [df_cons, df_aggr, df_noise] if not df.empty]
-
 if valid_dfs:
     all_stocks = pd.concat(valid_dfs, ignore_index=True).drop_duplicates(subset=['ticker'])
     selected_ticker = st.sidebar.selectbox("搜尋個股", all_stocks['ticker'].unique())
@@ -131,4 +138,4 @@ if valid_dfs:
     st.sidebar.metric("Beta", f"{float(stock_info.get('beta', 0)):.2f}")
     st.sidebar.metric("Rho", f"{float(stock_info.get('rho', 0)):.2f}")
 else:
-    st.sidebar.info("目前無可檢索標的。")
+    st.sidebar.info("目前無可檢索標的。[cite: 1]")
