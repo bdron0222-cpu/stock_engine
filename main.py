@@ -80,9 +80,17 @@ def main():
     # 1. 篩選股票
     print(f">>> [系統] 執行漏斗篩選...")
     watchlist_tickers = bulk_funnel_filter(ticker_list)
+    
+    # 【修正】：如果今日無符合標的，必須輸出空表覆蓋舊檔案，讓 Git 偵測到變動並讓 Streamlit 清空畫面
     if not watchlist_tickers:
-        print(">>> 今日無符合標的。")
+        print(">>> 今日無符合標的，覆寫為空表。")
+        empty_df = pd.DataFrame(columns=['ticker', 'price', 'volume', 'beta', 'rho', 'buy_signal', 'bb_dist'])
+        empty_df.to_csv("watchlist_conservative.csv", index=False)
+        empty_df.to_csv("watchlist_aggressive.csv", index=False)
+        empty_df.to_csv("watchlist_noise.csv", index=False)
+        empty_df.to_csv("all_candidates_proximity.csv", index=False)
         return
+        
     watchlist = pd.DataFrame(watchlist_tickers, columns=['ticker'])
     
     # 2. 獲取大盤數據用於計算 Beta/Rho
@@ -130,6 +138,9 @@ def main():
     cons.to_csv("watchlist_conservative.csv", index=False)
     aggr.to_csv("watchlist_aggressive.csv", index=False)
     noise.to_csv("watchlist_noise.csv", index=False)
+    
+    # 【修正】：補上輸出 Streamlit 需要的 "潛力觀察 (All)" 檔案
+    watchlist[target_columns].to_csv("all_candidates_proximity.csv", index=False)
     
     print(f">>> [成功] 已產出分類清單，成交量已轉換為張數。")
 
