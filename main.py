@@ -72,7 +72,10 @@ def calculate_strategy(ticker):
 
 def main():
     print(">>> [系統啟動] 每日訊號生成與策略驗證...")
-    if not is_market_allowed(): sys.exit()
+    
+    # 【修改處】：取消強制終止 (sys.exit)，改為僅印出警告提示，確保防禦期間資料照常更新
+    if not is_market_allowed(): 
+        print(">>> [提示] 目前大盤處於防禦/熔斷狀態，但已依照設定繼續抓取與更新今日最新數據...")
     
     ticker_list = pd.read_csv(STOCK_LIST_FILE)['ticker'].tolist() if os.path.exists(STOCK_LIST_FILE) else []
     if not ticker_list: sys.exit()
@@ -111,7 +114,6 @@ def main():
         if isinstance(stock_df.columns, pd.MultiIndex):
             stock_df = stock_df.xs(ticker, axis=1, level=1)
         
-        # 取得最後一筆資料的實際日期
         data_date = stock_df.index[-1].strftime('%Y-%m-%d')
         price = stock_df['Close'].iloc[-1]
         raw_volume = stock_df['Volume'].iloc[-1] if 'Volume' in stock_df.columns else 0
@@ -136,7 +138,7 @@ def main():
     strategy_results = watchlist['ticker'].apply(calculate_strategy)
     watchlist = pd.concat([watchlist, strategy_results], axis=1)
     
-    # 5. 分類並存檔 (包含 date 欄位)
+    # 5. 分類並存檔
     target_columns = ['ticker', 'date', 'price', 'volume', 'beta', 'rho', 'buy_signal', 'bb_dist']
     
     cons = watchlist[watchlist['beta'] < 0.5][target_columns]
@@ -149,7 +151,7 @@ def main():
     
     watchlist[target_columns].to_csv("all_candidates_proximity.csv", index=False)
     
-    print(f">>> [成功] 已產出分類清單（含資料日期），成交量已轉換為張數。")
+    print(f">>> [成功] 已產出分類清單，成交量已轉換為張數。")
 
 if __name__ == "__main__":
     main()
