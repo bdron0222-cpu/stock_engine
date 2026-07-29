@@ -22,22 +22,26 @@ def bulk_funnel_filter(ticker_list):
             if data.empty:
                 continue
                 
-            # 處理多檔股票的 MultiIndex 結構
-            if 'Close' in data.columns.levels[0]:
+            # 【修正】：嚴謹檢查是否為 MultiIndex，防止單一股票時報錯
+            if isinstance(data.columns, pd.MultiIndex) and 'Close' in data.columns.levels[0]:
                 close_df = data['Close']
                 vol_df = data['Volume']
             else:
-                # 處理只有 1 檔時的結構
-                close_df = data[['Close']]
-                vol_df = data[['Volume']]
+                # 處理只有 1 檔時的結構，或是舊版 yfinance 行為
+                close_df = pd.DataFrame(data['Close'])
+                vol_df = pd.DataFrame(data['Volume'])
             
             # 針對該批次中的每檔股票進行篩選
             for ticker in chunk:
-                if ticker not in close_df.columns:
-                    continue
-                
-                s_close = close_df[ticker].dropna()
-                s_vol = vol_df[ticker].dropna()
+                # 若為單一股票下載，欄位名稱會是 'Close' 而非股票代號，需做相容處理
+                if isinstance(data.columns, pd.MultiIndex):
+                    if ticker not in close_df.columns:
+                        continue
+                    s_close = close_df[ticker].dropna()
+                    s_vol = vol_df[ticker].dropna()
+                else:
+                    s_close = close_df['Close'].dropna()
+                    s_vol = vol_df['Volume'].dropna()
                 
                 if len(s_close) < 20:
                     continue
@@ -70,6 +74,6 @@ def bulk_funnel_filter(ticker_list):
         except Exception as e:
             print(f">>> [警告] 該批次下載失敗，跳過: {e}")
             continue
-
+            
     print(f">>> [系統] 漏斗篩選完成：符合條件共 {len(valid_stocks)} 檔。")
     return valid_stocks
