@@ -96,6 +96,12 @@ def main():
     # 2. 獲取大盤數據用於計算 Beta/Rho
     print(">>> [系統] 正在準備統計數據 (Beta/Rho/Volume)...")
     market_df = yf.download("^TWII", period="1mo", progress=False)
+    
+    # --- 日誌防呆機制：印出抓到的最新數據日期 ---
+    latest_date_str = market_df.index[-1].strftime('%Y-%m-%d')
+    print(f">>> [檢查] 目前大盤數據最新日期為: {latest_date_str}")
+    # ---------------------------------------------
+
     market_data = market_df['Close'].iloc[:, 0] if isinstance(market_df.columns, pd.MultiIndex) else market_df['Close']
     
     # 3. 計算並填入 price, volume, beta, rho
