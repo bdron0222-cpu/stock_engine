@@ -39,7 +39,7 @@ jobs:
                   patched = False
                   for line in lines:
                       if 'hma.name =' in line:
-                          new_lines.append('    hma.name = f\"HMA{\"\" if mamode == \"wma\" else mamode[0]}_{length}\"\n')
+                          new_lines.append('    hma.name = f\"HMA{\'\' if mamode == \'wma\' else mamode[0]}_{length}\"\n')
                           patched = True
                       else:
                           new_lines.append(line)
