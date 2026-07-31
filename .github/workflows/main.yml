@@ -34,12 +34,19 @@ jobs:
               hma_path = os.path.join(path, 'pandas_ta', 'overlap', 'hma.py')
               if os.path.exists(hma_path):
                   with open(hma_path, 'r', encoding='utf-8') as f:
-                      content = f.read()
-                  if 'hma.name = f' in content and '\"\"' in content:
-                      new_content = content.replace('f\"HMA{\"\"', \"f'HMA{''\")
+                      lines = f.readlines()
+                  new_lines = []
+                  patched = False
+                  for line in lines:
+                      if 'hma.name =' in line:
+                          new_lines.append('    hma.name = f\"HMA{\"\" if mamode == \"wma\" else mamode[0]}_{length}\"\n')
+                          patched = True
+                      else:
+                          new_lines.append(line)
+                  if patched:
                       with open(hma_path, 'w', encoding='utf-8') as f:
-                          f.write(new_content)
-                      print('Patched successfully')
+                          f.writelines(new_lines)
+                      print('Patched hma.py successfully!')
                   break
           "
 
