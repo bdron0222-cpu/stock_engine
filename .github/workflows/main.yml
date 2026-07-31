@@ -2,7 +2,6 @@ name: Stock Engine Automation
 
 on:
   schedule:
-    # 台灣時間下午 14:30 (UTC 06:30)，配合 yfinance 更新台股收盤資料
     - cron: '30 6 * * *'
     - cron: '0 1 * * 1'
   workflow_dispatch: 
@@ -15,38 +14,35 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir -r requirements.txt
           pip install --no-cache-dir pandas-ta --ignore-requires-python
-          
+
       - name: Patch pandas-ta syntax error
         run: |
-          INSTALL_PATH=$(pip show pandas-ta | grep "Location:" | awk '{print $2}')
-          FILE_PATH="$INSTALL_PATH/pandas_ta/overlap/hma.py"
-          
-          echo "正在強制修正檔案: $FILE_PATH"
-          python3 - << EOF
-          path = "$FILE_PATH"
-          try:
-              with open(path, 'r', encoding='utf-8') as f:
-                  content = f.read()
-              if 'hma.name = f' in content and '""' in content:
-                  new_content = content.replace('f"HMA{""', "f'HMA{''")
-                  with open(path, 'w', encoding='utf-8') as f:
-                      f.write(new_content)
-                  print("pandas-ta 語法修正成功！")
-              else:
-                  print("未發現需修正的字串或已修正過。")
-          except Exception as e:
-              print(f"修正略過或失敗: {e}")
-          EOF
-          
+          python3 -c "
+          import site, os
+          for path in site.getsitepackages():
+              hma_path = os.path.join(path, 'pandas_ta', 'overlap', 'hma.py')
+              if os.path.exists(hma_path):
+                  with open(hma_path, 'r', encoding='utf-8') as f:
+                      content = f.read()
+                  if 'hma.name = f' in content and '\"\"' in content:
+                      new_content = content.replace('f\"HMA{\"\"', \"f'HMA{''\")
+                      with open(hma_path, 'w', encoding='utf-8') as f:
+                          f.write(new_content)
+                      print('Patched successfully')
+                  break
+          "
+
       - name: Run Fetcher & Monitor
         run: |
           if [ ! -f "stocks_list.csv" ] || [ "${{ github.event.schedule }}" == "0 1 * * 1" ]; then
@@ -54,14 +50,11 @@ jobs:
           fi
           python market_monitor.py
           python main.py
-          
+
       - name: Commit and push changes
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          
           touch watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv all_candidates_proximity.csv stocks_list.csv market_state.json
-          
           git add -f watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv all_candidates_proximity.csv stocks_list.csv market_state.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "自動更新: 每日選股結果" && git push)
-```[cite: 1]
