@@ -3,7 +3,7 @@ import site
 import os
 import pandas as pd
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import filters.market_analyzer
 from filters.market_analyzer import analyze_market_regime
 
@@ -75,7 +75,7 @@ try:
         status = "active"
         reason = "無狀態檔案"
         last_update = "未知"
-
+        
     col1, col2, col3 = st.columns(3)
     with col1: 
         if status == "frozen":
@@ -116,8 +116,13 @@ with st.expander("📊 分類標準定義"):
 # --- 5. 載入數據 (加入檔案時間顯示與手動強制刷新機制) ---
 if os.path.exists("watchlist_conservative.csv"):
     file_time = os.path.getmtime("watchlist_conservative.csv")
-    formatted_time = datetime.fromtimestamp(file_time).strftime("%Y-%m-%d %H:%M:%S")
-    st.info(f"📁 雲端資料檔最後更新時間: {formatted_time}")
+    
+    # 將系統 timestamp 轉換為明確的 UTC 時間，並加上 8 小時轉換為台灣時間 (UTC+8)
+    dt_utc = datetime.fromtimestamp(file_time, timezone.utc)
+    dt_tw = dt_utc + timedelta(hours=8)
+    
+    formatted_time = dt_tw.strftime("%Y-%m-%d %H:%M:%S")
+    st.info(f"📁 雲端資料檔最後更新時間: {formatted_time} (台灣時間)")
 
 if st.button("🔄 強制刷新儀表板資料"):
     st.cache_data.clear() # 清除所有快取
@@ -159,4 +164,4 @@ if valid_dfs:
     st.sidebar.metric("Beta", f"{float(stock_info.get('beta', 0)):.2f}")
     st.sidebar.metric("Rho", f"{float(stock_info.get('rho', 0)):.2f}")
 else:
-    st.sidebar.info("目前無可檢索標的。")
+    st.sidebar.info("目前無可檢索標的。[cite: 1]")
