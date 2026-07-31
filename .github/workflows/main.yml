@@ -2,8 +2,8 @@ name: Stock Engine Automation
 
 on:
   schedule:
-    # 改為 UTC 10:00（台灣時間晚上 18:00），確保 yfinance 已完整更新當日台股收盤資料
-    - cron: '0 10 * * *'
+    # 改為 UTC 06:30（台灣時間下午 14:30），配合 yfinance 完整更新台股收盤資料的時間
+    - cron: '30 6 * * *'
     - cron: '0 1 * * 1'
   workflow_dispatch: 
 
@@ -15,12 +15,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -28,7 +26,6 @@ jobs:
           pip install --no-cache-dir -r requirements.txt
           # 2. 強制從 PyPI 安裝 pandas-ta
           pip install --no-cache-dir pandas-ta --ignore-requires-python
-
       # 【強制覆寫修正版】修正 pandas-ta 的語法錯誤
       - name: Patch pandas-ta syntax error
         run: |
@@ -48,7 +45,6 @@ jobs:
                       f.write(line)
           "
           echo "語法強制修正成功！"
-
       - name: Run Fetcher & Monitor
         run: |
           # 如果 stocks_list.csv 不存在，或剛好是排程星期一，就強制去抓取全市場股票清單
@@ -57,7 +53,6 @@ jobs:
           fi
           python market_monitor.py
           python main.py
-
       - name: Commit and push changes
         run: |
           git config --global user.name "GitHub Action"
@@ -69,3 +64,4 @@ jobs:
           # 將檔案強制加入 Git 追蹤與提交清單
           git add -f watchlist_conservative.csv watchlist_aggressive.csv watchlist_noise.csv all_candidates_proximity.csv stocks_list.csv market_state.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "自動更新: 每日選股結果" && git push)
+```[cite: 1]
