@@ -30,7 +30,6 @@ patch_pandas_ta()
 
 # --- 2. 優化提醒機制 ---
 DUE_FILE = "optimizer_due_date.json"
-
 def check_optimizer_due():
     """檢查是否超過 90 天未執行優化"""
     if not os.path.exists(DUE_FILE):
@@ -61,9 +60,10 @@ if check_optimizer_due():
         st.success("提醒已重置！請記得推送到 GitHub 更新線上版本。")
         st.rerun()
 
-# --- 4. 大盤市場狀態儀表板 (改為動態讀取 market_state.json) ---
+# --- 4. 大盤市場狀態監控 (結合防禦狀態與大盤型態) ---
 st.subheader("🌐 大盤市場狀態監控")
 try:
+    # 讀取熔斷狀態檔案
     state_file = "market_state.json"
     if os.path.exists(state_file):
         with open(state_file, "r") as f:
@@ -76,15 +76,22 @@ try:
         reason = "無狀態檔案"
         last_update = "未知"
         
-    col1, col2, col3 = st.columns(3)
+    # 取得大盤技術型態 (多頭/盤整/空頭)
+    market_analysis = analyze_market_regime(['^TWII'])
+    market_regime_type = market_analysis.get('regime', '盤整 (Range-bound)')
+
+    # 改用 4 個欄位來更完整展示狀態
+    col1, col2, col3, col4 = st.columns(4)
     with col1: 
         if status == "frozen":
-            st.metric("市場狀態", "🔴 熔斷防禦中 (Frozen)")
+            st.metric("市場防禦狀態", "🔴 熔斷 (Frozen)")
         else:
-            st.metric("市場狀態", "🟢 正常交易 (Active)")
+            st.metric("市場防禦狀態", "🟢 正常 (Active)")
     with col2: 
-        st.metric("觸發原因/狀態", reason)
+        st.metric("大盤技術型態", market_regime_type)
     with col3: 
+        st.metric("觸發原因/狀態", reason)
+    with col4: 
         st.metric("最後檢測日期", last_update)
         
     if status == "frozen":
