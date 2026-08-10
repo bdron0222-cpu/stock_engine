@@ -5,7 +5,7 @@ import pandas as pd
 import json
 from datetime import datetime, timezone, timedelta
 import filters.market_analyzer
-from filters.market_analyzer import analyze_market_regime
+from filters.market_analyzer import analyze_market_regime, analyze_granville
 
 # --- 1. 自動修復 pandas-ta 語法錯誤 (Hotfix) ---
 def patch_pandas_ta():
@@ -25,7 +25,6 @@ def patch_pandas_ta():
                 break
     except Exception:
         pass # 隱藏警告，避免干擾畫面
-
 patch_pandas_ta()
 
 # --- 2. 優化提醒機制 ---
@@ -60,7 +59,7 @@ if check_optimizer_due():
         st.success("提醒已重置！請記得推送到 GitHub 更新線上版本。")
         st.rerun()
 
-# --- 4. 大盤市場狀態監控 (結合防禦狀態與大盤型態) ---
+# --- 4. 大盤市場狀態監控 (結合防禦狀態、大盤型態與葛蘭碧八大法則) ---
 st.subheader("🌐 大盤市場狀態監控")
 try:
     # 讀取熔斷狀態檔案
@@ -76,11 +75,13 @@ try:
         reason = "無狀態檔案"
         last_update = "未知"
         
-    # 取得大盤技術型態 (多頭/盤整/空頭)
+    # 取得大盤技術型態與葛蘭碧法則分析
     market_analysis = analyze_market_regime(['^TWII'])
     market_regime_type = market_analysis.get('regime', '盤整 (Range-bound)')
-
-    # 改用 4 個欄位來更完整展示狀態
+    
+    granville_info = analyze_granville('^TWII')
+    
+    # 使用 4 個欄位來完整展示狀態
     col1, col2, col3, col4 = st.columns(4)
     with col1: 
         if status == "frozen":
@@ -90,12 +91,24 @@ try:
     with col2: 
         st.metric("大盤技術型態", market_regime_type)
     with col3: 
-        st.metric("觸發原因/狀態", reason)
+        st.metric("葛蘭碧八大法則", granville_info.get('rule', '未知'))
     with col4: 
         st.metric("最後檢測日期", last_update)
         
+    # 顯示葛蘭碧法則詳細解說卡片
+    g_type = granville_info.get('type', 'neutral')
+    g_title = granville_info.get('title', '')
+    g_desc = granville_info.get('desc', '')
+    
+    if g_type == 'buy':
+        st.success(f"🎯 **葛蘭碧狀態分析：{g_title}**\n\n{g_desc}")
+    elif g_type == 'sell':
+        st.error(f"⚠️ **葛蘭碧狀態分析：{g_title}**\n\n{g_desc}")
+    else:
+        st.info(f"📌 **葛蘭碧狀態分析：{g_title}**\n\n{g_desc}")
+        
     if status == "frozen":
-        st.warning("⚠️ **系統安全機制啟動：目前大盤跌幅過大，已進入暫停交易與防禦狀態！**")
+        st.warning("⚠️ **系統安全機制啟動：目前大盤跌幅過大，已進入暫停交易與防禦狀態！**[cite: 1]")
         
 except Exception as e:
     st.error(f"大盤監控系統暫時無法顯示: {e}")
